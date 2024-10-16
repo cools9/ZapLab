@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ZapLab Futuristic Code Editor</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: "Orbitron", sans-serif;
+                background-color: #0a0e17;
+                color: #7fdbff;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            header {
+                background-color: #1a1f2c;
+                padding: 15px 20px;
+                box-shadow: 0 2px 10px rgba(0, 255, 255, 0.1);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            h1 {
+                font-size: 28px;
+                font-weight: 700;
+                background: linear-gradient(45deg, #7fdbff, #39ff14);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                text-shadow: 0 0 10px rgba(127, 219, 255, 0.5);
+            }
+
+            .main-layout {
+                display: flex;
+                flex-grow: 1;
+                overflow: hidden;
+            }
+
+            .sidebar {
+                background-color: #1a1f2c;
+                width: 220px;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 2px 0 10px rgba(0, 255, 255, 0.1);
+                flex-shrink: 0;
+            }
+
+            button {
+                padding: 12px 15px;
+                background: linear-gradient(45deg, #7fdbff, #39ff14);
+                border: none;
+                border-radius: 25px;
+                color: #0a0e17;
+                cursor: pointer;
+                font-family: "Orbitron", sans-serif;
+                font-size: 14px;
+                font-weight: 700;
+                margin-bottom: 15px;
+                transition: all 0.3s ease;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                position: relative;
+                overflow: hidden;
+            }
+
+            button::before {
+                content: "";
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: rgba(255, 255, 255, 0.1);
+                transform: rotate(45deg);
+                z-index: 1;
+                transition: all 0.3s ease;
+            }
+
+            button:hover::before {
+                left: 100%;
+            }
+
+            button:hover {
+                box-shadow: 0 0 15px rgba(127, 219, 255, 0.5);
+                transform: translateY(-2px);
+            }
+
+            #project-directory {
+                display: none;
+                width: 250px;
+                background-color: #1a1f2c;
+                padding: 20px;
+                border-right: 1px solid #2a3040;
+                overflow-y: auto;
+                flex-shrink: 0;
+            }
+
+            #file-list {
+                list-style: none;
+                padding: 0;
+            }
+
+            #file-list li {
+                cursor: pointer;
+                padding: 10px;
+                margin-bottom: 5px;
+                background-color: #2a3040;
+                border-radius: 5px;
+                transition: all 0.3s ease;
+                font-size: 14px;
+            }
+
+            #file-list li:hover {
+                background-color: #3a4050;
+                box-shadow: 0 0 10px rgba(127, 219, 255, 0.3);
+            }
+
+            #code-editor {
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                background-color: #0a0e17;
+                position: relative;
+                overflow: hidden;
+            }
+
+            #editor-container {
+                display: flex;
+                flex-grow: 1;
+                overflow: hidden;
+            }
+
+            #line-numbers {
+                width: 50px;
+                background-color: #1a1f2c;
+                font-family: "Roboto Mono", monospace;
+                font-size: 14px;
+                line-height: 1.6;
+                padding: 20px 10px;
+                text-align: right;
+                color: #4a5060;
+                user-select: none;
+                overflow-y: hidden;
+            }
+
+            #editor {
+                flex-grow: 1;
+                border: none;
+                background-color: #0a0e17;
+                color: #7fdbff;
+                font-family: "Roboto Mono", monospace;
+                font-size: 16px;
+                line-height: 1.6;
+                padding: 20px;
+                resize: none;
+                outline: none;
+                overflow-y: auto;
+            }
+
+            #editor::placeholder {
+                color: #4a5060;
+            }
+
+            #editor::selection {
+                background-color: rgba(127, 219, 255, 0.3);
+            }
+
+            /* Glowing cursor effect */
+            @keyframes blink {
+                0% {
+                    opacity: 0;
+                }
+                50% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                }
+            }
+
+            #editor::after {
+                content: "|";
+                position: absolute;
+                color: #39ff14;
+                animation: blink 1s infinite;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>ZapLab</h1>
+            <div id="file-info">No file open</div>
+        </header>
+        <div class="main-layout">
+            <aside class="sidebar">
+                <button id="set-dir-btn">Set Directory</button>
+                <button id="toggle-project-btn">Project Files</button>
+                <button id="save-btn">Save</button>
+                <button id="open-project-btn">Open Project</button>
+            </aside>
+            <aside id="project-directory">
+                <h2>Project Files</h2>
+                <ul id="file-list"></ul>
+            </aside>
+            <main id="code-editor">
+                <div id="editor-container">
+                    <div id="line-numbers"></div>
+                    <textarea
+                        id="editor"
+                        placeholder="// Start coding your future..."
+                    ></textarea>
+                </div>
+            </main>
+        </div>
+
+        <script>
+            let currentDirectory = "";
+
+            // Set Directory Functionality
+            document
+                .getElementById("set-dir-btn")
+                .addEventListener("click", function () {
+                    const dirPath = prompt(
+                        "Enter the directory path where you want to save/open files:",
+                    );
+                    if (dirPath) {
+                        fetch("/set_directory", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ directory: dirPath }),
+                        })
+                            .then((response) => response.json())
+                            .then((data) => {
+                                if (data.status === "success") {
+                                    currentDirectory = dirPath;
+                                    document.getElementById(
+                                        "file-list",
+                                    ).innerHTML = "";
+                                    data.files.forEach((file) =>
+                                        addFileToDirectory(file),
+                                    );
+                                    alert("Directory set successfully!");
+                                } else {
+                                    alert(data.message);
+                                }
+                            });
+                    }
+                });
+
+            function addFileToDirectory(fileName) {
+                const fileList = document.getElementById("file-list");
+                const listItem = document.createElement("li");
+                listItem.textContent = fileName;
+                listItem.addEventListener("click", () =>
+                    switchToFile(fileName),
+                );
+                fileList.appendChild(listItem);
+            }
+
+            function switchToFile(fileName) {
+                fetch(`/open/${fileName}`)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.status === "success") {
+                            document.getElementById("editor").value =
+                                data.content;
+                        } else {
+                            alert(data.message);
+                        }
+                    });
+            }
+
+            // Toggle Project Directory
+            document
+                .getElementById("toggle-project-btn")
+                .addEventListener("click", function () {
+                    const projectDirectory =
+                        document.getElementById("project-directory");
+                    if (
+                        projectDirectory.style.display === "none" ||
+                        projectDirectory.style.display === ""
+                    ) {
+                        projectDirectory.style.display = "block";
+                        this.textContent = "Hide Project Files";
+                    } else {
+                        projectDirectory.style.display = "none";
+                        this.textContent = "Show Project Files";
+                    }
+                });
+
+            // Save Functionality
+            document
+                .getElementById("save-btn")
+                .addEventListener("click", function () {
+                    const content = document.getElementById("editor").value;
+                    const filename = prompt(
+                        "Enter filename (with .txt extension):",
+                        "untitled.txt",
+                    );
+                    if (filename) {
+                        fetch("/save", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                filename: filename,
+                                content: content,
+                            }),
+                        })
+                            .then((response) => response.json())
+                            .then((data) => {
+                                alert(data.message);
+                                if (data.status === "success") {
+                                    addFileToDirectory(filename); // Add to project files
+                                }
+                            });
+                    }
+                });
+
+            // Open Project Functionality
+            document
+                .getElementById("open-project-btn")
+                .addEventListener("click", function () {
+                    alert("Use the 'Set Directory' button to open a project.");
+                });
+
+            const editor = document.getElementById("editor");
+            const lineNumbers = document.getElementById("line-numbers");
+
+            function updateLineNumbers() {
+                const lines = editor.value.split("\n");
+                lineNumbers.innerHTML = lines
+                    .map((_, index) => index + 1)
+                    .join("<br>");
+            }
+
+            editor.addEventListener("input", updateLineNumbers);
+            editor.addEventListener("scroll", () => {
+                lineNumbers.scrollTop = editor.scrollTop;
+            });
+
+            updateLineNumbers();
+
+            // Update file info
+            function updateFileInfo(fileName) {
+                document.getElementById("file-info").textContent =
+                    fileName || "No file open";
+            }
+
+            // Modify switchToFile function
+            function switchToFile(fileName) {
+                fetch(`/open/${fileName}`)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.status === "success") {
+                            editor.value = data.content;
+                            updateLineNumbers();
+                            updateFileInfo(fileName);
+                        } else {
+                            alert(data.message);
+                        }
+                    });
+            }
+
+            // Modify save functionality
+            document
+                .getElementById("save-btn")
+                .addEventListener("click", function () {
+                    const content = editor.value;
+                    const filename = prompt("Enter filename:", "untitled.txt");
+                    if (filename) {
+                        fetch("/save", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                filename: filename,
+                                content: content,
+                            }),
+                        })
+                            .then((response) => response.json())
+                            .then((data) => {
+                                alert(data.message);
+                                if (data.status === "success") {
+                                    addFileToDirectory(filename);
+                                    updateFileInfo(filename);
+                                }
+                            });
+                    }
+                });
+        </script>
+    </body>
+</html>
